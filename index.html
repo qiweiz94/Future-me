@@ -48,22 +48,49 @@
             </form>
         </div>
         
-        <div id="results" class="results-container" style="display: none;">
+    <div id="results" class="results-container" style="display: none;">
+        <div class="results-content">
             <div class="loading-spinner">Generating your future...</div>
-            <div id="story-output" class="story-text"></div>
-            <div id="error-message" class="error-text" style="display: none;"></div>
+            <div class="results-grid">
+                <div class="story-column">
+                    <div id="story-output" class="story-text"></div>
+                    <div id="voice-player" class="voice-section">
+                        <div class="voice-loading" style="display: none;">Creating your future voice message...</div>
+                        <audio id="voice-audio" controls style="display: none; width: 100%; margin-top: 1rem;"></audio>
+                        <div id="voice-error" class="error-text" style="display: none;"></div>
+                    </div>
+                </div>
+                <div id="image-container" class="image-section">
+                    <div class="image-loading" style="display: none;">Creating your future image...</div>
+                    <img id="future-image" class="future-image" style="display: none;">
+                    <div id="image-error" class="error-text" style="display: none;"></div>
+                </div>
+            </div>
         </div>
+        <button id="try-again" class="cta-button secondary">Try Again</button>
+    </div>
     </section>
     
     <script>
         // WARNING: Exposed API key – not for production use!
         const GEMINI_API_KEY = "YOUR_TEMPORARY_KEY"; // Replace with Google AI Studio key
+        const DALLE_API_KEY = "YOUR_DALLE_API_KEY"; // Replace with OpenAI API key
+        const ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_API_KEY"; // Replace with ElevenLabs API key
 
         async function generateFutureStory(name, job, location, value, hobby) {
             const resultsContainer = document.getElementById('results');
             const loadingSpinner = document.querySelector('.loading-spinner');
             const storyOutput = document.getElementById('story-output');
-            const errorMessage = document.getElementById('error-message');
+            const errorMessage = document.getElementById('story-error');
+            
+            // Create error element if it doesn't exist
+            if (!errorMessage) {
+                const errorDiv = document.createElement('div');
+                errorDiv.id = 'story-error';
+                errorDiv.className = 'error-text';
+                errorDiv.style.display = 'none';
+                resultsContainer.appendChild(errorDiv);
+            }
             
             resultsContainer.style.display = 'block';
             loadingSpinner.style.display = 'block';
@@ -102,6 +129,106 @@
             }
         }
 
+        async function generateFutureImage(name, job, location, value, hobby) {
+            const imageContainer = document.getElementById('image-container');
+            const imageLoading = document.querySelector('.image-loading');
+            const futureImage = document.getElementById('future-image');
+            const imageError = document.getElementById('image-error');
+            
+            // Show image loading state
+            imageContainer.style.display = 'block';
+            imageLoading.style.display = 'block';
+            futureImage.style.display = 'none';
+            imageError.style.display = 'none';
+            
+            try {
+                const response = await fetch('https://api.openai.com/v1/images/generations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${DALLE_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: "dall-e-3",
+                        prompt: `Create a realistic and hopeful artistic depiction of a person named ${name} who works as a ${job} in ${location}. This person values ${value} and enjoys ${hobby} in their future life. Style should be warm and optimistic, high definition quality.`,
+                        n: 1,
+                        size: "1024x1024",
+                        quality: "hd"
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Image API request failed');
+                
+                const data = await response.json();
+                const imageUrl = data.data[0].url;
+                
+                // Display the generated image
+                imageLoading.style.display = 'none';
+                futureImage.src = imageUrl;
+                futureImage.style.display = 'block';
+            } catch (error) {
+                console.error('Image API Error:', error);
+                // Hide loading and show error message
+                imageLoading.style.display = 'none';
+                imageError.textContent = 'Failed to create future image. Using placeholder.';
+                imageError.style.display = 'block';
+                
+                // Use a placeholder image
+                futureImage.src = 'https://placehold.co/600x400/e86c5d/white?text=Your+Future+Self';
+                futureImage.style.display = 'block';
+            }
+        }
+
+        async function generateFutureVoice(story) {
+            const voicePlayer = document.getElementById('voice-player');
+            const voiceLoading = document.querySelector('.voice-loading');
+            const voiceAudio = document.getElementById('voice-audio');
+            const voiceError = document.getElementById('voice-error');
+            
+            // Show voice loading state
+            voiceLoading.style.display = 'block';
+            voiceAudio.style.display = 'none';
+            voiceError.style.display = 'none';
+            
+            try {
+                // Extract first paragraph (split at first double newline)
+                const firstParagraph = story.split('\n\n')[0] || story.substring(0, 200);
+                
+                const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/Rachel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'xi-api-key': ELEVENLABS_API_KEY
+                    },
+                    body: JSON.stringify({
+                        text: firstParagraph,
+                        model_id: "eleven_monolingual_v1",
+                        voice_settings: {
+                            stability: 0.5,
+                            similarity_boost: 0.75
+                        }
+                    })
+                });
+                
+                if (!response.ok) throw new Error('Voice API request failed');
+                
+                // Create object URL for audio blob
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                
+                // Display the audio player
+                voiceLoading.style.display = 'none';
+                voiceAudio.src = audioUrl;
+                voiceAudio.style.display = 'block';
+            } catch (error) {
+                console.error('Voice API Error:', error);
+                // Hide loading and show error message
+                voiceLoading.style.display = 'none';
+                voiceError.textContent = 'Oops! Future you lost their voice...';
+                voiceError.style.display = 'block';
+            }
+        }
+
         document.getElementById('future-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -115,13 +242,37 @@
             
             sessionStorage.setItem('futureMeData', JSON.stringify(formData));
             
-            await generateFutureStory(
+            // Generate story first
+            const story = await generateFutureStory(
                 formData.name,
                 formData.job,
                 formData.location,
                 formData.value,
                 formData.hobby
             );
+            
+            // Then generate image
+            await generateFutureImage(
+                formData.name,
+                formData.job,
+                formData.location,
+                formData.value,
+                formData.hobby
+            );
+            
+            // Finally generate voice message
+            await generateFutureVoice(story);
+        });
+
+        document.getElementById('try-again').addEventListener('click', () => {
+            // Reset the form
+            document.getElementById('future-form').reset();
+            
+            // Hide results
+            document.getElementById('results').style.display = 'none';
+            
+            // Scroll back to quiz
+            document.getElementById('quiz').scrollIntoView({ behavior: 'smooth' });
         });
     </script>
 </body>
