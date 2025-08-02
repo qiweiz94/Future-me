@@ -17,8 +17,61 @@
     </section>
 
     <section id="quiz">
-        <h2>Your Future Awaits</h2>
-        <p>Quiz section placeholder - this is where the 5 questions will appear.</p>
+        <div class="form-card">
+            <form id="future-form">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="job">Dream job</label>
+                    <input type="text" id="job" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location (where you'll live in 10 years)</label>
+                    <input type="text" id="location" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="value">One core value you believe in</label>
+                    <input type="text" id="value" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="hobby">One fun hobby or obsession</label>
+                    <input type="text" id="hobby" required>
+                </div>
+                
+                <button type="submit" class="cta-button">Generate My Future</button>
+            </form>
+        </div>
     </section>
+    
+    <script>
+        document.getElementById('future-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Collect form data
+            const formData = {
+                name: document.getElementById('name').value,
+                job: document.getElementById('job').value,
+                location: document.getElementById('location').value,
+                value: document.getElementById('value').value,
+                hobby: document.getElementById('hobby').value
+            };
+            
+            // Store in local state (session storage for persistence)
+            sessionStorage.setItem('futureMeData', JSON.stringify(formData));
+            
+            // Log to console for debugging
+            console.log('Form data saved:', formData);
+            
+            // Placeholder for next step - in a real implementation this would 
+            // generate the future story and navigate to results page
+            alert('Future story generation would happen here! Data saved to session storage.');
+        });
+    </script>
 </body>
 </html>
